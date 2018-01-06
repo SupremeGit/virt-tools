@@ -1,13 +1,19 @@
 #!/bin/bash
 # -*- mode: sh; -*-
 
-#script to sequence some ops using:
-# soe_create_vms.sh to: maniupulate libvirt vms
-# several ansible playbooks to connect & install soe on hosts 
+#soe_build_vms.sh
+#
+#Script to sequence some ops using:
+#  soe_create_vms.sh to: maniupulate libvirt vms
+#  several ansible playbooks to connect & install soe on hosts 
+#
+#This version doesn't rely on environment, you can tweak all the parameters within this script:
 
 #location of soe_create_vms.sh:
-TOOLDIR="/data-ssd/data/development/src/github/virt-tools/virt-soe"
-#TOOLDIR="/usr/local/bin"
+soe_create_script="/data-ssd/data/development/src/github/virt-tools/virt-soe/soe_create_vms.sh"
+alias jj-soe-create-vms="${soe_create_script} --domain soe --vms"
+#Available operations:
+#create, define, undefine, define, reimage, refresh, start, destroy, save. restore, shutdown, reboot, reset
 
 #ansible playbooks/vault config:
 var_playbook_connect="/etc/ansible/playbooks/connect-host.yml"       #${var_playbook_connect}
@@ -21,18 +27,9 @@ vault="--vault-password-file ~/.ansible_vault_password"
 #
 #or:
 #
-vmnames="temp"
+vm_names="temp"
 vm_fq_names="temp.soe.vorpal"
 
-#Available operations:
-#create, define, undefine, define, reimage, refresh, start, destroy, save. restore, shutdown, reboot, reset
-
-function jj-soe-status-vms () {
-    ${TOOLDIR}/soe_create_vms.sh --domain soe --vms "${vmnames}" "status" $@
-}
-function jj-soe-start-vms () {
-    ${TOOLDIR}/soe_create_vms.sh --domain soe --vms "${vmnames}" "start" $@
-}
 function jj-ansible-connect-play () {
     ansible-playbook -i /etc/ansible/hosts --extra-vars 'hostgroups=all facts_on=no' ${var_playbook_connect} ${vault} --tags=connect-new-host --limit "${vm_fq_names}" $@
     #"shell sshpass -p {{ new_vm_password }}  ssh-copy-id -i /root/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@{{inventory_hostname}}"
@@ -41,12 +38,10 @@ function jj-ansible-connect-requirements () {
     #installs python2-dnf requirement for ansible, on el8+, fedora, and python/python-apt requirement for Debian :
     ansible-playbook -i /etc/ansible/hosts --extra-vars 'hostgroups=all facts_on=no' ${var_playbook_connect} ${vault} --tags=ansible_requirements --limit "${vm_fq_names}" $@
 }
+
 function jj-ansible-soe-play-vms () {
     #run the main soe build playbook:
     ansible-playbook -i /etc/ansible/hosts --extra-vars 'hostgroups=soe' ${var_playbook_soe} ${vault} --limit "${vm_fq_names}" $@
-}
-function jj-soe-shutdown-vms () {
-    ${TOOLDIR}/soe_create_vms.sh --domain soe --vms "${vmnames}" "shutdown" $@
 }
 
 ################################
@@ -54,13 +49,15 @@ function jj-soe-shutdown-vms () {
 
 echo
 echo "Current VM status: ${vmnames}"
-jj-soe-status-vms
+jj-soe-create-vms "${vm_names}" status
 
 echo "Booting VMs: ${vmnames}"
-jj-soe-start-vms
+jj-soe-create-vms "${vm_names}" start
 
 echo "Waiting for VMs to boot:"
 sleep 5
+
+#operate on: "${vm_fq_names}"
 
 echo "Connecting vis ssh key: ${vm_fq_names}"
 jj-ansible-connect-play
@@ -68,9 +65,21 @@ jj-ansible-connect-play
 echo "Installing Ansible requirements: ${vm_fq_names}"
 jj-ansible-connect-requirements
 
-echo "Installing the SOE: ${vm_fq_names}"
+echo "Running specific tags from the SOE: ${vm_fq_names}"
+jj-ansible-soe-play-vms --tags "f27-server,f27-runlevel"
+
+echo "Running SOE deploymemt tasks: ${vm_fq_names}"
 jj-ansible-soe-play-vms
 
-echo "Shutting down: ${vmnames}"
-jj-soe-shutdown-vms
+echo "Shutting down: ${vm_names}"
+jj-soe-create-vms "${vm_names}" shutdown
+
+
+
+
+
+
+
+
+
 

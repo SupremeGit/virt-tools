@@ -1,7 +1,8 @@
 #!/bin/bash
 
+#Template dir holds subdirectory: "domain-soe" holding libvirt xml files based off a templat file at ${TEMPLATE_DIR}/soe.xml
 #TEMPLATE_DIR=/etc/libvirt/z_templates
-TEMPLATE_DIR=/data-ssd/data/development/src/github/public/tools/virt_soe/soe-vms
+TEMPLATE_DIR=/data-ssd/data/development/src/github/virt-tools/virt-soe
 vmnames="centos fedora"
 domain="soe"
 #DEBUG=echo 
@@ -19,7 +20,7 @@ usage () {
     echo "      --domain  \"soe\"                 Domain name."
     echo
     echo "Available VMs:"
-    echo "               centos7           7.4"
+    echo "               centos7          7.4"
     echo "               fedora26"
     echo "               fedora           27"
     echo "               rawhide"
@@ -111,7 +112,7 @@ function vm_xml_op_all () {
     operation="$1"
     echo "${i}"
     for i in ${vmnames} ; do 
-	$DEBUG virsh "${operation}" "${TEMPLATE_DIR}/${domain}-vms/{domain}_${i}.xml"
+	$DEBUG virsh "${operation}" "${TEMPLATE_DIR}/${domain}-vms/${domain}_${i}.xml"
     done
 }
 function vm_reimage () {
@@ -147,7 +148,7 @@ elif [[ $( check_xml_operation "${operation}" ) ]] ; then
     vm_xml_op_all "${operation}"
 elif [[ "${operation}" == "reimage" ]] ; then 
     vm_reimage_all 
-elif [[ "${operation}" == "freshen" ]] ; then 
+elif [[ "${operation}" == "refresh" ]] ; then 
     vm_refresh_all 
 else 
     echo "Hmm. Unknown operation: ${operation}"
