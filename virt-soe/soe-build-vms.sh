@@ -4,8 +4,6 @@
 #    soe_create_vms.sh to: maniupulate libvirt vms
 #    several ansible playbooks to connect & install soe on hosts 
 
-BOOTDELAY=15
-
 #soe-vm-control.sh operates on a group of vms defined from a libvirt template:
 #  available operations: create, define, undefine, define, reimage, refresh, start, destroy, save. restore, shutdown, reboot, reset
 soe_vm_control_script="/data-ssd/data/development/src/github/virt-tools/virt-soe/soe-vm-control.sh"
@@ -16,7 +14,7 @@ var_playbook_soe="/etc/ansible/playbooks/soe.yml"    	             #${var_playbo
 vault="--vault-password-file ~/.ansible_vault_password"              #${vault}
 hostsfile="-i /etc/ansible/hosts"                                    #${hostsfile} 
 
-domain=soe  #domain for all our vms
+domain="soe"   #vm domain to use when creating vms, also used for hostgroup in ansible commands
 
 #vms to operate on:
 #def_vm_names="centos7 fedora ubuntu ubuntu_server temp foo bar"
@@ -53,35 +51,15 @@ function soe-vm-control-vms () {
 }
 
 #basic command without playbook, facts on/off:
-function ansible-play           () { ansible-playbook ${vault} ${hostsfile} --extra-vars 'hostgroups=soe' "$@" ; }
-function ansible-play-facts-off () { ansible-playbook ${vault} ${hostsfile} --extra-vars 'hostgroups=soe facts_on=no' "$@" ; }
+function ansible-play           () { ansible-playbook ${vault} ${hostsfile} --extra-vars "hostgroups=${domain}" "$@" ; }
+function ansible-play-facts-off () { ansible-playbook ${vault} ${hostsfile} --extra-vars "hostgroups=${domain} facts_on=no" "$@" ; }
 
 #main playbook commmands:
 function ansible-connect        () { ansible-play-facts-off ${var_playbook_connect} --tags=connect-new-host       "$@" ; }
 function ansible-requirements   () { ansible-play-facts-off ${var_playbook_connect} --tags=ansible_requirements   "$@" ; }
 function ansible-soe            () { ansible-play           ${var_playbook_soe}     --extra-vars 'hostgroups=soe' "$@" ; }
 
-function msg_start () {
-    echo
-    echo "Started"
-    date +%H-%M-%S
-    echo
-}
-function msg_finished () {
-    echo
-    echo "Finished:"
-    date +%H-%M-%S
-    echo
-}
-
-#test functions:
-function test-tags () {
-    vm-ansible-run-soe --tags "f27-server,f27-runlevel" -vv
-}
-function test-vm-control () {
-    soe-vm-control "status" --vms "${vm_names}"
-}
-
+#test status of vms:
 function vm-test-boot () {
     vms_up=0
     for i in  ${vm_names} ; do 
@@ -106,6 +84,7 @@ function vm-wait-boot () {
 	vm-test-boot
 	up=$?
     done
+    sleep 5   #qemu guest agent comes up fast, so, wait another 5 seconds for ssh
 }
 function vm-test-up () {
     vms_up=0
@@ -131,6 +110,34 @@ function vm-wait-shutdown () {
     done
 }
 
+#misc:
+function msg_start () {
+    echo
+    echo "Started"
+    date +%H-%M-%S
+    echo
+}
+function msg_finished () {
+    echo
+    echo "Finished:"
+    date +%H-%M-%S
+    echo
+}
+
+#testing:
+function set-x-on () {
+    set -x
+}
+function set-x-off () {
+    set +x
+}
+function test-tags () {
+    vm-ansible-run-soe --tags "f27-server,f27-runlevel" -vv
+}
+function test-vm-control () {
+    soe-vm-control "status" --vms "${vm_names}"
+}
+
 #That's all we really need. Now we can define some groups of commands and then some sequences which use these groups:
 
 function vm-boot () {
@@ -148,7 +155,6 @@ function vm-undefine () {
     soe-vm-control-vms "destroy"
     soe-vm-control-vms "undefine"
 }
-
 function vm-ansible-setup () {
     echo "Connecting vis ssh key: ${vm_fq_names}"             ; ansible-connect      --limit "${vm_fq_names}"
     echo "Installing Ansible requirements: ${vm_fq_names}"    ; ansible-requirements --limit "${vm_fq_names}"
@@ -169,19 +175,19 @@ function sequence-full () {
 function sequence-partial () {
     echo "Running ad-hoc sequence of commands:"   #comment or uncomment as desired:
 
-    vm-boot
+    #vm-boot
     #or:
     #soe-vm-control-vms "undefine"
     #soe-vm-control-vms "define"
     #soe-vm-control-vms "start"
 
     #virsh list --all
-    vm-wait-boot
+    #vm-wait-boot
 
     #vm-ansible-setup 
     #vm-ansible-run-soe
 
-    vm-shutdown
+    #vm-shutdown
     #or:
     #soe-vm-control-vms "shutdown"
     #vm-wait-shutdown
@@ -189,12 +195,6 @@ function sequence-partial () {
     #soe-vm-control-vms "undefine"
 }
 
-function set-x-on () {
-    set -x
-}
-function set-x-off () {
-    set +x
-}
 #set-x-on
 ########################################Start invoking commands here:
 msg_start
@@ -202,8 +202,8 @@ msg_start
 #soe-vm-control     "status" --vms "${vm_names}"
 #virsh list --all
 
-#sequence-full
-sequence-partial
+sequence-full
+#sequence-partial
 
 msg_finished
 ########################################Finish here.
