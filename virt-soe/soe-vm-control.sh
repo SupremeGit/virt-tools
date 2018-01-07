@@ -19,7 +19,7 @@ TEMPLATE_DIR="/data-ssd/data/development/src/github/virt-tools/virt-soe/vms-${do
 KVM_DIR="/data-ssd/data/kvm"                       #main KVM dir
 
 #Shouldn't have to change anything below here:
-
+LIBVIRT_DELAY=1;                                   #delay to avoid lame libvirt lockups
 VM_DIR="${KVM_DIR}/vm"                             #running vms go in ${VM_DIR}/${domain}
 IMAGE_DIR="${KVM_DIR}/images"                      #saved vms, refresh copies images freshly installed osfrom here
 
@@ -123,6 +123,7 @@ function vm_op_all () {
     for i in ${vmnames} ; do 
 	echo "${i}:"
 	$DEBUG virsh ${operation} "${domain}_${i}"
+	sleep ${LIBVIRT_DELAY}
     done
 }
 function vm_xml_op_all () {

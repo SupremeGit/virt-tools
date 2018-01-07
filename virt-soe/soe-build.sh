@@ -6,9 +6,9 @@
 #
 # Can call this script like:
 #    ~/src/github/virt-tools/virt-soe/soe-build.sh --vms "centos7 fedora"
-#
 # The soe-vm-control script is alao called like:
-#    ~/src/github/virt-tools/virt-soe/soe-vm-control.sh --vms "centos7 fedora" shutdown
+#    ~/src/github/virt-tools/virt-soe/soe-vm-control.sh status   --vms "centos7 fedora temp foo bar ubuntu ubuntu_server"
+# If present, --vms "foo bar" must be the last parameter
 
 #soe-vm-control.sh operates on a group of vms defined from a libvirt template:
 #  available operations: create, define, undefine, define, reimage, refresh, start, destroy, save. restore, shutdown, reboot, reset
@@ -21,7 +21,7 @@ vault="--vault-password-file ~/.ansible_vault_password"              #${vault}
 hostsfile="-i /etc/ansible/hosts"                                    #${hostsfile} 
 domain="soe.vorpal"     #vm "domain" to use when creating vms
 hostgroup=${domain%.*}  #use leftmost part of domain for ansible hostgroup
-SSHD_DELAY=10           #extra delay to wait for ssh.
+SSHD_DELAY=15           #extra delay to wait for ssh.
 
 #vms to operate on:
 #def_vm_names="centos7 fedora ubuntu ubuntu_server temp foo bar"
@@ -59,8 +59,7 @@ function process_args () {
 	case ${1} in          #switches for this shell script begin with '--'
             -h | help)        usage;;
             -d | --debug )    export debug=1; export DEBUG=echo ; echo -e "\nDebug mode on.";;
-            #--vms)           export vm_names="$2"   ; echo "VMs = ${vm_names}" ; shift ;;
-            --vms)            shift ; export def_vm_names="$@" ; soe-set-vm_names ; echo "VMs = ${vm_names}" ; shift ;;
+            --vms)            shift ; export def_vm_names="$@" ; soe-set-vm_names ; echo "VMs = ${vm_names}" ; shift $# ;; #shift to use up all args
             *)                ok=0 ; echo "Unrecognised option: ${1}" ;  usage ;;
 	esac;
 	shift
@@ -220,7 +219,7 @@ function sequence-partial () {
     #vm-wait-boot
 
     #vm-ansible-setup 
-    vm-ansible-run-soe
+    #vm-ansible-run-soe
 
     #vm-shutdown
     #or:
@@ -245,8 +244,8 @@ msg_start
 #soe-vm-control     "status" --vms "${vm_names}"
 #virsh list --all
 
-#sequence-full
-sequence-partial
+sequence-full
+#equence-partial
 #sequence-test 
 
 msg_finished
