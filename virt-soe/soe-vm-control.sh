@@ -13,10 +13,12 @@
 
 vmnames="foo bar"
 domain="soe.vorpal"
+
+TOOL_DIR="/data-ssd/data/development/src/github/ansible-soe"
 #Template dir holds subdirectory: "domain-soe" holding libvirt xml files based off a templat file at ${TEMPLATE_DIR}/soe.xml
 #TEMPLATE_DIR=/etc/libvirt/z_templates
-TEMPLATE_DIR="/data-ssd/data/development/src/github/virt-tools/virt-soe/vms-${domain}"
-KVM_DIR="/data-ssd/data/kvm"                       #main KVM dir
+TEMPLATE_DIR="${TOOL_DIR}/virt-soe/vms-${domain}"
+KVM_DIR="/data-ssd/data/kvm"                       #main KVM dir (to copy images into)
 
 #Shouldn't have to change anything below here:
 LIBVIRT_DELAY=1;                                   #delay to avoid lame libvirt lockups
@@ -141,7 +143,6 @@ function retry () {
 	fi
     done
 }
-
 function vm_op_all () {
     operation="$1"
     for i in ${vmnames} ; do 
