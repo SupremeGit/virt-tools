@@ -1,11 +1,30 @@
 #!/bin/bash
+#
+# Script to control our vms
+#
+# Works on libvirt template files which specify a bunch of vms in a group (domain)
+# The image files, running vm, and templates must be set below.
+#
+# Also, the vm template files must have:
+#  - name set to match: ${domain}_${vmname} eg:  <name>soe.vorpal_new</name>
+#  - disk image set to match: ${VM_DIR}/${domain}/${vmname}.qcow2 eg: <source file='/data-ssd/data/kvm/vm/soe.vorpal/new.qcow2'/>
 
+#DEBUG=echo 
+
+vmnames="foo bar"
+domain="soe.vorpal"
 #Template dir holds subdirectory: "domain-soe" holding libvirt xml files based off a templat file at ${TEMPLATE_DIR}/soe.xml
 #TEMPLATE_DIR=/etc/libvirt/z_templates
-TEMPLATE_DIR=/data-ssd/data/development/src/github/virt-tools/virt-soe
-vmnames="centos fedora"
-domain="soe"
-#DEBUG=echo 
+TEMPLATE_DIR="/data-ssd/data/development/src/github/virt-tools/virt-soe/vms-${domain}"
+KVM_DIR="/data-ssd/data/kvm"                       #main KVM dir
+
+#Shouldn't have to change anything below here:
+
+VM_DIR="${KVM_DIR}/vm"                             #running vms go in ${VM_DIR}/${domain}
+IMAGE_DIR="${KVM_DIR}/images"                      #saved vms, refresh copies images freshly installed osfrom here
+
+#switch to creating new image:
+BLANK_IMAGE="${IMAGE_DIR}/25G.qcow2"               #blank, sparse image, small & quick to copy
 
 BALLS=Salty ; debug=0 ;  help=0 ; ok=1
 usage () {
@@ -17,7 +36,7 @@ usage () {
     echo "      -h | --help                     Lists this usage information."
     echo "      -d | --debug                    Echo the commands that will be executed."
     echo "      --vms  \"vm1 vm2\"                Space separated quoted list of vm names"
-    echo "      --domain  \"soe\"                 Domain name."
+    echo "      --domain  \"soe.vorpal\"          Domain name."
     echo
     echo "Available VMs:"
     echo "               centos7          7.4"
@@ -110,11 +129,11 @@ function vm_xml_op_all () {
     operation="$1"
     for i in ${vmnames} ; do 
 	echo "${i}:"
-	$DEBUG virsh ${operation} "${TEMPLATE_DIR}/${domain}-vms/${domain}_${i}.xml"
+	$DEBUG virsh ${operation} "${TEMPLATE_DIR}/${domain}_${i}.xml"
     done
 }
 function vm_reimage () {
-    $DEBUG cp --sparse=always -v "/data-ssd/data/kvm/images/25G.qcow2" "/data-ssd/data/kvm/vm/${domain}/${1}.qcow2"
+    $DEBUG cp --sparse=always -v "${BLANK_IMAGE}" "${VM_DIR}/${domain}/${1}.qcow2"
 }
 function vm_reimage_all () {
     for i in ${vmnames} ; do 
@@ -124,11 +143,10 @@ function vm_reimage_all () {
 function vm_refresh () {
     mydomain="$1"
     myvmname="$2"
-    $DEBUG cp --sparse=always -v "/mnt/6Tb/Shared-6tb/data/kvm/images/${mydomain}/${myvmname}-vm01.qcow2" "/data-ssd/data/kvm/vm/${mydomain}/${myvmname}.qcow2"
+    $DEBUG cp --sparse=always -v "${IMAGE_DIR}/${mydomain}/${myvmname}-vm01.qcow2" "${VM_DIR}/${mydomain}/${myvmname}.qcow2"
 }
 function vm_refresh_all () {
     for i in ${vmnames} ; do 
-	#if [[ "${i}" == "rawhide"       ]] ; then vm_reset_rawhide       ; fi
 	vm_refresh "${domain}" "${i}"
     done
 }

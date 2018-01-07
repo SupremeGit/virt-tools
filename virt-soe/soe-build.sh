@@ -13,21 +13,20 @@ var_playbook_connect="/etc/ansible/playbooks/connect-host.yml"       #${var_play
 var_playbook_soe="/etc/ansible/playbooks/soe.yml"    	             #${var_playbook_soe}
 vault="--vault-password-file ~/.ansible_vault_password"              #${vault}
 hostsfile="-i /etc/ansible/hosts"                                    #${hostsfile} 
-
-domain="soe"          #vm "domain" to use when creating vms, also used for hostgroup in ansible commands
-topdomain="vorpal"    #hostnames are of form "${vm_name}.${domain}.${topdomain} "
+domain="soe.vorpal"     #vm "domain" to use when creating vms
+hostgroup=${domain%.*}  #use leftmost part of domain for ansible hostgroup
 
 #vms to operate on:
 #def_vm_names="centos7 fedora ubuntu ubuntu_server temp foo bar"
 #def_vm_names="centos7 fedora ubuntu_server temp"
 #def_vm_names="centos7 temp"
-def_vm_names="temp"
+def_vm_names="centos7"
 
 function soe-set-vm_names () {
     export vm_names="${def_vm_names}"
     vm_fq_names=""
-    for i in {vm_names} ; do 
-	vm_fq_names+="${i}.${domain}.${topdomain} "
+    for i in ${vm_names} ; do 
+	vm_fq_names+="${i}.${domain} "
     done
     export vm_fq_names
 }
@@ -49,13 +48,13 @@ function soe-vm-control-vms () {
 }
 
 #basic command without playbook, facts on/off:
-function ansible-play           () { ansible-playbook ${vault} ${hostsfile} --extra-vars "hostgroups=${domain}" "$@" ; }
-function ansible-play-facts-off () { ansible-playbook ${vault} ${hostsfile} --extra-vars "hostgroups=${domain} facts_on=no" "$@" ; }
+function ansible-play           () { ansible-playbook ${vault} ${hostsfile} --extra-vars "hostgroups=${hostgroup}"             "$@" ; }
+function ansible-play-facts-off () { ansible-playbook ${vault} ${hostsfile} --extra-vars "hostgroups=${hostgroup} facts_on=no" "$@" ; }
 
 #main playbook commmands:
-function ansible-connect        () { ansible-play-facts-off ${var_playbook_connect} --tags=connect-new-host       "$@" ; }
-function ansible-requirements   () { ansible-play-facts-off ${var_playbook_connect} --tags=ansible_requirements   "$@" ; }
-function ansible-soe            () { ansible-play           ${var_playbook_soe}     --extra-vars 'hostgroups=soe' "$@" ; }
+function ansible-connect        () { ansible-play-facts-off ${var_playbook_connect} --tags=connect-new-host                "$@" ; }
+function ansible-requirements   () { ansible-play-facts-off ${var_playbook_connect} --tags=ansible_requirements            "$@" ; }
+function ansible-soe            () { ansible-play           ${var_playbook_soe}     --extra-vars "hostgroups=${hostgroup}" "$@" ; }
 
 #test status of vms:
 function vm-test-boot () {
@@ -72,7 +71,7 @@ function vm-test-boot () {
     return $vms_up
 }
 function vm-wait-boot () {
-    echo "Waiting:    VMs: ${vm_names}"   #; sleep ${BOOTDELAY}
+    echo "Waiting:    VMs: ${vm_names}"
     set -- ${vm_names}
     no_of_vms=$#
     vm-test-boot
@@ -82,7 +81,9 @@ function vm-wait-boot () {
 	vm-test-boot
 	up=$?
     done
-    sleep 5   #qemu guest agent comes up fast, so, wait another 5 seconds for ssh
+    SSHD_DELAY=5
+    echo "Waiting ${SSHD_DELAY} seconds extra for sshd to come up."
+    sleep ${SSHD_DELAY} #qemu guest agent comes up fast, so, wait 5 secs for ssh
 }
 function vm-test-up () {
     vms_up=0
@@ -173,26 +174,30 @@ function sequence-full () {
 function sequence-partial () {
     echo "Running ad-hoc sequence of commands:"   #comment or uncomment as desired:
 
-    vm-boot
+    #vm-boot
     #or:
     #soe-vm-control-vms "undefine"
     #soe-vm-control-vms "define"
     #soe-vm-control-vms "start"
 
     #virsh list --all
-    vm-wait-boot
+    #vm-wait-boot
 
     #vm-ansible-setup 
     #vm-ansible-run-soe
 
-    vm-shutdown
+    #vm-shutdown
     #or:
     #soe-vm-control-vms "shutdown"
     #vm-wait-shutdown
     #soe-vm-control-vms "destroy"
     #soe-vm-control-vms "undefine"
 }
-
+function sequence-test () {
+    echo "Running test sequence of commands:"   #comment or uncomment as desired:
+    #soe-vm-control-vms "reimage"   #replace with (small, sparse) blank disk image
+    #soe-vm-control-vms "refresh"   #replace with image of freshly installed os
+}
 #set-x-on
 ########################################Start invoking commands here:
 msg_start
@@ -200,8 +205,9 @@ msg_start
 #soe-vm-control     "status" --vms "${vm_names}"
 #virsh list --all
 
-#sequence-full
-sequence-partial
+sequence-full
+#sequence-partial
+#sequence-test 
 
 msg_finished
 ########################################Finish here.
