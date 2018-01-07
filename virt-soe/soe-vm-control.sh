@@ -66,9 +66,7 @@ function process_args () {
 	case ${1} in          #switches for this shell script begin with '--'
             -h | help)        usage;;
             -d | --debug )    export debug=1; export DEBUG=echo ; echo -e "\nDebug mode on.";;
-            status)           echo -e "Executing command: status." ; operation="domstate --reason";;
-
-            create | define | undefine | reimage | refresh | start | destroy | save | restore | shutdown | reboot | reset )
+            status | create | define | undefine | reimage | refresh | start | destroy | save | restore | shutdown | reboot | reset )
                 operation="${1}" ; echo -e "Executing operation: $1.";;
 	    --vms)            ok=1 ; vmnames="$2"  ; echo "Operating on vms: ${vmnames}" ; shift ;;
 	    --domain)         domain="$2"  ; echo "Operating on domain: ${domain}" ; shift ;;
@@ -83,7 +81,7 @@ function process_args () {
 
 function check_operation () {
     op="$1"
-    if [[ "domstate --reason start destroy save restore shutdown reboot reset" == *"${op}"* || "${op}" == "undefine" ]] ; then 
+    if [[ "start destroy save restore shutdown reboot reset" == *"${op}"* || "${op}" == "undefine" ]] ; then 
 	echo "Valid normal operation: ${op}"
 	return 1;
     else
@@ -110,9 +108,9 @@ function vm_op_all () {
 }
 function vm_xml_op_all () {
     operation="$1"
-    echo "${i}"
     for i in ${vmnames} ; do 
-	$DEBUG virsh "${operation}" "${TEMPLATE_DIR}/${domain}-vms/${domain}_${i}.xml"
+	echo "${i}:"
+	$DEBUG virsh ${operation} "${TEMPLATE_DIR}/${domain}-vms/${domain}_${i}.xml"
     done
 }
 function vm_reimage () {
@@ -135,6 +133,10 @@ function vm_refresh_all () {
     done
 }
 
+function set-x-on () {
+    set -x
+}
+#set-x-on
 ###########################################################
 #start here:
 
@@ -146,6 +148,8 @@ if [[ $( check_operation "${operation}" ) ]] ; then
     vm_op_all "${operation}"
 elif [[ $( check_xml_operation "${operation}" ) ]] ; then 
     vm_xml_op_all "${operation}"
+elif [[ "${operation}" == "status" ]] ; then 
+    vm_op_all "domstate --reason"
 elif [[ "${operation}" == "reimage" ]] ; then 
     vm_reimage_all 
 elif [[ "${operation}" == "refresh" ]] ; then 
