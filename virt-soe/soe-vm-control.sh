@@ -14,10 +14,10 @@
 vmnames="foo bar"
 domain="soe.vorpal"
 
-TOOL_DIR="/data-ssd/data/development/src/github/ansible-soe"
+TOOL_DIR="/data-ssd/data/development/src/github/ansible-soe/virt-soe"
 #Template dir holds subdirectory: "domain-soe" holding libvirt xml files based off a templat file at ${TEMPLATE_DIR}/soe.xml
 #TEMPLATE_DIR=/etc/libvirt/z_templates
-TEMPLATE_DIR="${TOOL_DIR}/virt-soe/vms-${domain}"
+TEMPLATE_DIR="${TOOL_DIR}/vms-${domain}"
 KVM_DIR="/data-ssd/data/kvm"                       #main KVM dir (to copy images into)
 
 #Shouldn't have to change anything below here:
