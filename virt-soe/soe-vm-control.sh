@@ -98,9 +98,18 @@ function process_args () {
     echo
 }
 
+function check_operation_retry () {
+    op="$1"
+    if [[ "start" == *"${op}"* ]] ; then 
+	echo "Valid retry operation: ${op}"
+	return 1;
+    else
+	return 0
+    fi
+}
 function check_operation () {
     op="$1"
-    if [[ "start destroy save restore shutdown reboot reset" == *"${op}"* || "${op}" == "undefine" ]] ; then 
+    if [[ "destroy save restore shutdown reboot reset" == *"${op}"* || "${op}" == "undefine" ]] ; then 
 	echo "Valid normal operation: ${op}"
 	return 1;
     else
@@ -117,13 +126,34 @@ function check_xml_operation () {
 	return 0
     fi
 }
+function retry () {
+    vmname="$1"
+    operation="$2"
+    RETRIES=3
+    for j in 1 to ${RETRIES} ; do 
+	$DEBUG virsh ${operation} "${domain}_${vmname}"
+	status=$?
+	if [[ ${status} -ne 0 ]] ; then 
+	    echo "Retrying "
+	    sleep ${LIBVIRT_DELAY}
+	else
+	    break
+	fi
+    done
+}
 
 function vm_op_all () {
     operation="$1"
     for i in ${vmnames} ; do 
 	echo "${i}:"
 	$DEBUG virsh ${operation} "${domain}_${i}"
-	sleep ${LIBVIRT_DELAY}
+    done
+}
+function vm_op_all_retry () {
+    operation="$1"
+    for i in ${vmnames} ; do 
+	echo "${i}:"
+	retry "${i}" "${operation}"
     done
 }
 function vm_xml_op_all () {
@@ -165,6 +195,8 @@ process_args "$@"
 #vm_all
 if [[ $( check_operation "${operation}" ) ]] ; then 
     vm_op_all "${operation}"
+elif [[ $( check_operation_retry "${operation}" ) ]] ; then 
+    vm_op_all_retry "${operation}"
 elif [[ $( check_xml_operation "${operation}" ) ]] ; then 
     vm_xml_op_all "${operation}"
 elif [[ "${operation}" == "status" ]] ; then 
