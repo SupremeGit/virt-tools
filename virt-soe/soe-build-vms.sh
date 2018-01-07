@@ -14,24 +14,23 @@ var_playbook_soe="/etc/ansible/playbooks/soe.yml"    	             #${var_playbo
 vault="--vault-password-file ~/.ansible_vault_password"              #${vault}
 hostsfile="-i /etc/ansible/hosts"                                    #${hostsfile} 
 
-domain="soe"   #vm domain to use when creating vms, also used for hostgroup in ansible commands
+domain="soe"          #vm "domain" to use when creating vms, also used for hostgroup in ansible commands
+topdomain="vorpal"    #hostnames are of form "${vm_name}.${domain}.${topdomain} "
 
 #vms to operate on:
 #def_vm_names="centos7 fedora ubuntu ubuntu_server temp foo bar"
-#def_vm_fq_names="centos7.soe.vorpal fedora.soe.vorpal ubuntu ubuntu_server.soe.vorpal temp.soe.vorpal foo.soe.vorpal bar.soe.vorpal"
-#or:
 #def_vm_names="centos7 fedora ubuntu_server temp"
-#def_vm_fq_names="centos7.soe.vorpal fedora.soe.vorpal ubuntu_server.soe.vorpal temp.soe.vorpal"
-#or:
 #def_vm_names="centos7 temp"
-#def_vm_fq_names="centos7.soe.vorpal temp.soe.vorpal"
-#or:
 def_vm_names="temp"
-def_vm_fq_names="temp.soe.vorpal"
 
 function soe-set-vm_names () {
     export vm_names="${def_vm_names}"
-    export vm_fq_names="${def_vm_fq_names}"
+    #export vm_fq_names="${def_vm_fq_names}"
+    vm_fq_names=""
+    for i in {vm_names} ; do 
+	vm_fq_names+="${i}.${domain}.${topdomain} "
+    done
+    export vm_fq_names
 }
 #when not set here, vm_names and vm_fq_names are taken from environment:
 soe-set-vm_names  
@@ -175,19 +174,19 @@ function sequence-full () {
 function sequence-partial () {
     echo "Running ad-hoc sequence of commands:"   #comment or uncomment as desired:
 
-    #vm-boot
+    vm-boot
     #or:
     #soe-vm-control-vms "undefine"
     #soe-vm-control-vms "define"
     #soe-vm-control-vms "start"
 
     #virsh list --all
-    #vm-wait-boot
+    vm-wait-boot
 
     #vm-ansible-setup 
     #vm-ansible-run-soe
 
-    #vm-shutdown
+    vm-shutdown
     #or:
     #soe-vm-control-vms "shutdown"
     #vm-wait-shutdown
@@ -202,8 +201,8 @@ msg_start
 #soe-vm-control     "status" --vms "${vm_names}"
 #virsh list --all
 
-sequence-full
-#sequence-partial
+#sequence-full
+sequence-partial
 
 msg_finished
 ########################################Finish here.
