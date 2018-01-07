@@ -25,7 +25,6 @@ def_vm_names="temp"
 
 function soe-set-vm_names () {
     export vm_names="${def_vm_names}"
-    #export vm_fq_names="${def_vm_fq_names}"
     vm_fq_names=""
     for i in {vm_names} ; do 
 	vm_fq_names+="${i}.${domain}.${topdomain} "
